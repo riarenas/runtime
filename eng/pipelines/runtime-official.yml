@@ -356,11 +356,11 @@ stages:
       platforms:
       - windows_x64
 
-  - template: /eng/common/templates/job/publish-build-assets.yml
-    parameters:
-      publishUsingPipelines: true
-      pool:
-        vmImage: vs2017-win2016
+- template: /eng/common/templates/job/publish-build-assets.yml
+  parameters:
+    publishUsingPipelines: true
+    pool:
+      vmImage: vs2017-win2016
 
 - ${{ if eq(variables.isOfficialBuild, true) }}:
   # Stages-based publishing entry point
