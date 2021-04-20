@@ -362,6 +362,7 @@ stages:
       pool:
         vmImage: vs2017-win2016
 
+- ${{ if eq(variables.isOfficialBuild, true) }}:
   # Stages-based publishing entry point
   - template: /eng/common/templates/post-build/post-build.yml
     parameters:
