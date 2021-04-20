@@ -45,16 +45,16 @@ jobs:
       downloadPath: $(Build.SourcesDirectory)\artifacts\PackageDownload
       checkDownloadedFiles: true
 
-  - script: >-
-      build.cmd -ci
-      -subset publish
-      -configuration Release
-      /p:PublishRidAgnosticPackagesFromPlatform=${{ parameters.PublishRidAgnosticPackagesFromPlatform }}
-      /p:OfficialBuildId=$(Build.BuildNumber)
-      /p:SignType=$(SignType)
-      /p:DotNetSignType=$(SignType)
-      /bl:$(Build.SourcesDirectory)\prepare-artifacts.binlog
-    displayName: Prepare artifacts and upload to build
+  #- script: >-
+  #    build.cmd -ci
+  #    -subset publish
+  #    -configuration Release
+  #    /p:PublishRidAgnosticPackagesFromPlatform=${{ parameters.PublishRidAgnosticPackagesFromPlatform }}
+  #    /p:OfficialBuildId=$(Build.BuildNumber)
+  #    /p:SignType=$(SignType)
+  #    /p:DotNetSignType=$(SignType)
+  #    /bl:$(Build.SourcesDirectory)\prepare-artifacts.binlog
+  #  displayName: Prepare artifacts and upload to build
 
   - task: CopyFiles@2
     displayName: Copy Files to $(Build.StagingDirectory)\BuildLogs

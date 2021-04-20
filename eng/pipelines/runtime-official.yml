@@ -357,6 +357,40 @@ stages:
       - windows_x64
 
 - ${{ if eq(variables.isOfficialBuild, true) }}:
-  - template: /eng/pipelines/official/stages/publish.yml
+  - template: /eng/common/templates/job/publish-build-assets.yml
     parameters:
-      isOfficialBuild: ${{ variables.isOfficialBuild }}
+      publishUsingPipelines: true
+      pool:
+        vmImage: vs2017-win2016
+
+  # Stages-based publishing entry point
+  - template: /eng/common/templates/post-build/post-build.yml
+    parameters:
+      publishingInfraVersion: ${{ parameters.publishingInfraVersion }}
+      validateDependsOn:
+      - Build
+      # The following checks are run after the build in the validation and release pipelines
+      # And thus are not enabled here. They can be enabled for dev builds for spot testing if desired
+      enableSymbolValidation: false
+      enableSigningValidation: false
+      enableNugetValidation: false
+      enableSourceLinkValidation: false
+      SDLValidationParameters:
+        enable: false
+        artifactNames:
+        - PackageArtifacts
+        - BlobArtifacts
+        params: >-
+          -SourceToolsList @("policheck","credscan")
+          -TsaInstanceURL "$(TsaInstanceURL)"
+          -TsaProjectName "$(TsaProjectName)"
+          -TsaNotificationEmail "$(TsaNotificationEmail)"
+          -TsaCodebaseAdmin "$(TsaCodebaseAdmin)"
+          -TsaBugAreaPath "$(TsaBugAreaPath)"
+          -TsaIterationPath "$(TsaIterationPath)"
+          -TsaRepositoryName "$(TsaRepositoryName)"
+          -TsaCodebaseName "$(TsaCodebaseName)"
+          -TsaPublish $True
+      symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=true'
+      # Publish to blob storage.
+      publishInstallersAndChecksums: true
