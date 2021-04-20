@@ -366,7 +366,7 @@ stages:
   # Stages-based publishing entry point
   - template: /eng/common/templates/post-build/post-build.yml
     parameters:
-      publishingInfraVersion: ${{ parameters.publishingInfraVersion }}
+      publishingInfraVersion: 3
       validateDependsOn:
       - Build
       # The following checks are run after the build in the validation and release pipelines
