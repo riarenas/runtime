@@ -139,7 +139,7 @@ stages:
         buildArgs: -s mono+libs+host+packs+mono.mscordbi -c $(_BuildConfig)
         nameSuffix: AllSubsets_Mono
         isOfficialBuild: ${{ variables.isOfficialBuild }}
-        extraStepsTemplate: /eng/pipelines/common/upload-intermediate-artifacts-step.yml
+        # extraStepsTemplate: /eng/pipelines/common/upload-intermediate-artifacts-step.yml
         extraStepsParameters:
           name: MonoRuntimePacks
 
@@ -167,7 +167,7 @@ stages:
       platforms:
       - Linux_x64
       jobParameters:
-        buildArgs: -s mono+packs -c $(_BuildConfig)
+        buildArgs: -s mono+packs -c $(_BuildConfig) -publish
                    /p:MonoCrossAOTTargetOS=Android+Browser /p:SkipMonoCrossJitConfigure=true /p:BuildMonoAOTCrossCompilerOnly=true
         nameSuffix: CrossAOT_Mono
         runtimeVariant: crossaot
@@ -178,7 +178,7 @@ stages:
         - Android
         - Browser
         isOfficialBuild: ${{ variables.isOfficialBuild }}
-        extraStepsTemplate: /eng/pipelines/common/upload-intermediate-artifacts-step.yml
+        # extraStepsTemplate: /eng/pipelines/common/upload-intermediate-artifacts-step.yml
         extraStepsParameters:
           name: MonoRuntimePacks
 
@@ -190,7 +190,7 @@ stages:
       platforms:
       - Windows_x64
       jobParameters:
-        buildArgs: -s mono+packs -c $(_BuildConfig)
+        buildArgs: -s mono+packs -c $(_BuildConfig) -publish
                    /p:MonoCrossAOTTargetOS=Android+Browser /p:SkipMonoCrossJitConfigure=true /p:BuildMonoAOTCrossCompilerOnly=true
         nameSuffix: CrossAOT_Mono
         runtimeVariant: crossaot
@@ -201,7 +201,7 @@ stages:
         - Android
         - Browser
         isOfficialBuild: ${{ variables.isOfficialBuild }}
-        extraStepsTemplate: /eng/pipelines/common/upload-intermediate-artifacts-step.yml
+        # extraStepsTemplate: /eng/pipelines/common/upload-intermediate-artifacts-step.yml
         extraStepsParameters:
           name: MonoRuntimePacks
 
@@ -213,7 +213,7 @@ stages:
       platforms:
       - OSX_x64
       jobParameters:
-        buildArgs: -s mono+packs -c $(_BuildConfig)
+        buildArgs: -s mono+packs -c $(_BuildConfig) -publish
                    /p:MonoCrossAOTTargetOS=Android+Browser+tvOS+iOS+MacCatalyst /p:SkipMonoCrossJitConfigure=true /p:BuildMonoAOTCrossCompilerOnly=true
         nameSuffix: CrossAOT_Mono
         runtimeVariant: crossaot
@@ -230,7 +230,7 @@ stages:
         - iOS
         - MacCatalyst
         isOfficialBuild: ${{ variables.isOfficialBuild }}
-        extraStepsTemplate: /eng/pipelines/common/upload-intermediate-artifacts-step.yml
+        # extraStepsTemplate: /eng/pipelines/common/upload-intermediate-artifacts-step.yml
         extraStepsParameters:
           name: MonoRuntimePacks
 
@@ -256,12 +256,12 @@ stages:
         buildConfig: release
         runtimeFlavor: mono
         jobParameters:
-          buildArgs: -s mono+libs+host+packs -c $(_BuildConfig)
+          buildArgs: -s mono+libs+host+packs -c $(_BuildConfig) -publish
                      /p:MonoEnableLLVM=true /p:MonoBundleLLVMOptimizer=false
           nameSuffix: AllSubsets_Mono_LLVMJIT
           runtimeVariant: LLVMJIT
           isOfficialBuild: ${{ variables.isOfficialBuild }}
-          extraStepsTemplate: /eng/pipelines/common/upload-intermediate-artifacts-step.yml
+          # extraStepsTemplate: /eng/pipelines/common/upload-intermediate-artifacts-step.yml
           extraStepsParameters:
             name: MonoRuntimePacks
       #LLVMAOT
@@ -269,12 +269,12 @@ stages:
         buildConfig: release
         runtimeFlavor: mono
         jobParameters:
-          buildArgs: -s mono+libs+host+packs -c $(_BuildConfig)
+          buildArgs: -s mono+libs+host+packs -c $(_BuildConfig) -publish
                       /p:MonoEnableLLVM=true /p:MonoBundleLLVMOptimizer=true
           nameSuffix: AllSubsets_Mono_LLVMAOT
           runtimeVariant: LLVMAOT
           isOfficialBuild: ${{ variables.isOfficialBuild }}
-          extraStepsTemplate: /eng/pipelines/common/upload-intermediate-artifacts-step.yml
+          # extraStepsTemplate: /eng/pipelines/common/upload-intermediate-artifacts-step.yml
           extraStepsParameters:
             name: MonoRuntimePacks
 
@@ -372,6 +372,42 @@ stages:
       - Linux_x64
 
 - ${{ if eq(variables.isOfficialBuild, true) }}:
-  - template: /eng/pipelines/official/stages/publish.yml
+  # Publish to Build Asset Registry in order to generate the ReleaseConfigs artifact.
+  - template: /eng/common/templates/job/publish-build-assets.yml
     parameters:
-      isOfficialBuild: ${{ variables.isOfficialBuild }}
+      publishUsingPipelines: true
+      dependsOn: PrepareSignedArtifacts
+      pool:
+        vmImage: vs2017-win2016
+
+# Stages-based publishing entry point
+  - template: /eng/common/templates/post-build/post-build.yml
+    parameters:
+      publishingInfraVersion: ${{ parameters.publishingInfraVersion }}
+      validateDependsOn:
+      - PrepareForPublish
+      # The following checks are run after the build in the validation and release pipelines
+      # And thus are not enabled here. They can be enabled for dev builds for spot testing if desired
+      enableSymbolValidation: false
+      enableSigningValidation: false
+      enableNugetValidation: false
+      enableSourceLinkValidation: false
+      SDLValidationParameters:
+        enable: false
+        artifactNames:
+        - PackageArtifacts
+        - BlobArtifacts
+        params: >-
+          -SourceToolsList @("policheck","credscan")
+          -TsaInstanceURL "$(TsaInstanceURL)"
+          -TsaProjectName "$(TsaProjectName)"
+          -TsaNotificationEmail "$(TsaNotificationEmail)"
+          -TsaCodebaseAdmin "$(TsaCodebaseAdmin)"
+          -TsaBugAreaPath "$(TsaBugAreaPath)"
+          -TsaIterationPath "$(TsaIterationPath)"
+          -TsaRepositoryName "$(TsaRepositoryName)"
+          -TsaCodebaseName "$(TsaCodebaseName)"
+          -TsaPublish $True
+      symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=true'
+      # Publish to blob storage.
+      publishInstallersAndChecksums: true
